@@ -8,7 +8,19 @@ import { Server } from "socket.io";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// CORS global (antes de cualquier ruta)
+app.use(cors({
+  origin: [
+    "http://localhost:5173", 
+    "https://whatsapp-clon-vfs7-git-main-alfredo-gazabons-projects.vercel.app"
+  ],
+  methods: ["GET","POST","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
+  credentials: true
+}));
+
+// Middleware para parsear JSON
 app.use(express.json());
 
 // Crear servidor HTTP
@@ -17,7 +29,10 @@ const server = http.createServer(app);
 // Configurar Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "https://whatsapp-clon-vfs7-git-main-alfredo-gazabons-projects.vercel.app",
+    origin: [
+      "http://localhost:5173",
+      "https://whatsapp-clon-vfs7-git-main-alfredo-gazabons-projects.vercel.app"
+    ],
     methods: ["GET", "POST"],
   },
 });
@@ -35,7 +50,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Cliente Twilio (versión ESM)
+// Cliente Twilio
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
@@ -65,8 +80,8 @@ app.get("/", (req, res) => {
   res.send("✅ Servidor WhatsApp-Clon Backend activo");
 });
 
-// Puerto dinámico para Render
+// Puerto dinámico
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () =>
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
-);
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+});
