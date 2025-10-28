@@ -8,41 +8,47 @@ import { Server } from "socket.io";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://whatsapp-clon-vfs7-git-main-alfredo-gazabons-projects.vercel.app",
+    "https://whatsapp-clon-vfs7.vercel.app", // versión estable de tu frontend
+  ],
+  methods: ["GET", "POST"],
+}));
 app.use(express.json());
 
-
+// Crear servidor HTTP base
 const server = http.createServer(app);
 
-
+// Configurar Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "https://whatsapp-clon-vfs7-git-main-alfredo-gazabons-projects.vercel.app/",
+    origin: [
+      "https://whatsapp-clon-vfs7-git-main-alfredo-gazabons-projects.vercel.app",
+      "https://whatsapp-clon-vfs7.vercel.app",
+    ],
+    methods: ["GET", "POST"],
   },
 });
 
-
+// Conexión de sockets
 io.on("connection", (socket) => {
   console.log("🟢 Usuario conectado:", socket.id);
 
-  
   socket.on("sendMessage", (data) => {
-    console.log("📩 Mensaje recibido del cliente:", data);
-
-    
+    console.log("📩 Mensaje recibido:", data);
     socket.broadcast.emit("receiveMessage", data);
   });
 
-  
   socket.on("disconnect", () => {
     console.log("🔴 Usuario desconectado:", socket.id);
   });
 });
 
+// Inicializar cliente Twilio
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-
-
+// Endpoint para enviar SMS
 app.post("/api/send-code", async (req, res) => {
   try {
     const { to, code } = req.body;
@@ -61,11 +67,11 @@ app.post("/api/send-code", async (req, res) => {
   }
 });
 
-
+// Endpoint raíz
 app.get("/", (req, res) => {
-  res.send("✅ Servidor WhatsApp-Clon Backend activo");
+  res.send("✅ Servidor WhatsApp-Clon Backend activo en Render");
 });
 
-
+// Puerto dinámico (Render usa su propio PORT)
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
