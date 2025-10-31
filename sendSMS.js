@@ -1,4 +1,3 @@
-// sendSMS.js
 import express from "express";
 import twilio from "twilio";
 import cors from "cors";

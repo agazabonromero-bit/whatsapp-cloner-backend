@@ -9,7 +9,6 @@ dotenv.config();
 
 const app = express();
 
-// CORS global (antes de cualquier ruta)
 app.use(cors({
   origin: [
     "http://localhost:5173", 
@@ -20,13 +19,13 @@ app.use(cors({
   credentials: true
 }));
 
-// Middleware para parsear JSON
+
 app.use(express.json());
 
-// Crear servidor HTTP
+
 const server = http.createServer(app);
 
-// Configurar Socket.IO
+
 const io = new Server(server, {
   cors: {
     origin: [
@@ -50,13 +49,13 @@ io.on("connection", (socket) => {
   });
 });
 
-// Cliente Twilio
+
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
 
-// Endpoint para enviar código SMS
+
 app.post("/api/send-code", async (req, res) => {
   try {
     const { to, code } = req.body;
@@ -75,12 +74,12 @@ app.post("/api/send-code", async (req, res) => {
   }
 });
 
-// Ruta base
+
 app.get("/", (req, res) => {
   res.send("✅ Servidor WhatsApp-Clon Backend activo");
 });
 
-// Puerto dinámico
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
