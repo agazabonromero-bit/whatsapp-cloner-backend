@@ -23,30 +23,21 @@ const corsOptions = {
 
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); 
-
-app.use(express.json());
+app.use(express.json()); 
 
 const server = http.createServer(app);
 
-
 const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://whatsapp-clon-6f67.vercel.app",
-      "https://whatsapp-cloner-backend.onrender.com"
-    ],
-    methods: ["GET", "POST"],
-  },
+  cors: corsOptions, 
+  transports: ["websocket", "polling"],
 });
 
 
 io.on("connection", (socket) => {
-  console.log("🟢 Usuario conectado:", socket.id);
+  console.log("Usuario conectado:", socket.id);
 
   socket.on("sendMessage", (data) => {
-    console.log("📩 Mensaje recibido del cliente:", data);
+    console.log("Mensaje recibido del cliente:", data);
     socket.broadcast.emit("receiveMessage", data);
   });
 
@@ -87,6 +78,6 @@ app.get("/", (req, res) => {
 
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
