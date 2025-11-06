@@ -38,11 +38,12 @@ io.on("connection", (socket) => {
 
   socket.on("sendMessage", (data) => {
     console.log("Mensaje recibido del cliente:", data);
-    socket.broadcast.emit("receiveMessage", data);
+
+    io.emit("receiveMessage", data);
   });
 
   socket.on("disconnect", () => {
-    console.log("🔴 Usuario desconectado:", socket.id);
+    console.log("Usuario desconectado:", socket.id);
   });
 });
 
@@ -79,5 +80,5 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
