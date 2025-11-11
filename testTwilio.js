@@ -8,13 +8,13 @@ const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TO
 async function test() {
   try {
     const msg = await client.messages.create({
-      body: "Prueba de autenticación Twilio ✅",
+      body: "Prueba de autenticación Twilio",
       from: process.env.TWILIO_PHONE_NUMBER,
       to: "+573105333704" 
     });
-    console.log("✅ Mensaje enviado:", msg.sid);
+    console.log("Mensaje enviado:", msg.sid);
   } catch (err) {
-    console.error("❌ Error Twilio:", err.message);
+    console.error("Error Twilio:", err.message);
   }
 }
 

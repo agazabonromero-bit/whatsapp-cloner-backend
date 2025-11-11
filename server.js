@@ -4,46 +4,89 @@ import dotenv from "dotenv";
 import twilio from "twilio";
 import cors from "cors";
 import { Server } from "socket.io";
+import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
 
 const app = express();
 
-
 const corsOptions = {
   origin: [
     "http://localhost:5173",
     "https://whatsapp-clon-6f67.vercel.app",
-    "https://whatsapp-cloner-backend.onrender.com"
+    "https://whatsapp-cloner-backend.onrender.com",
   ],
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
+  credentials: true,
 };
 
-
 app.use(cors(corsOptions));
-app.use(express.json()); 
+app.use(express.json());
 
 const server = http.createServer(app);
 
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+
 const io = new Server(server, {
-  cors: corsOptions, 
+  cors: corsOptions,
   transports: ["websocket", "polling"],
 });
 
 
+const usuariosConectados = new Map();
+
+
 io.on("connection", (socket) => {
-  console.log("Usuario conectado:", socket.id);
+  console.log("🟢 Usuario conectado:", socket.id);
 
-  socket.on("sendMessage", (data) => {
-    console.log("Mensaje recibido del cliente:", data);
-
-    io.emit("receiveMessage", data);
+  
+  socket.on("join", (username) => {
+    socket.username = username;
+    usuariosConectados.set(username, socket.id);
+    console.log(`👤 ${username} se unió con ID ${socket.id}`);
   });
 
+  
+  socket.on("sendMessage", async (data) => {
+    const { from, to, texto, fecha } = data;
+    console.log(`💬 Mensaje de ${from} para ${to}: ${texto}`);
+
+    
+    try {
+      const { error } = await supabase.from("mensajes").insert([data]);
+      if (error) console.error("❌ Error guardando mensaje:", error);
+      else console.log("✅ Mensaje guardado en Supabase");
+    } catch (err) {
+      console.error("⚠️ Error de Supabase:", err.message);
+    }
+
+    
+    const targetSocketId = usuariosConectados.get(to);
+
+    if (targetSocketId) {
+      
+      io.to(targetSocketId).emit("receiveMessage", data);
+      console.log(`📨 Enviado mensaje de ${from} a ${to}`);
+    } else {
+      console.log(`⚠️ ${to} no está conectado`);
+    }
+
+    
+    socket.emit("messageSentConfirmation", { success: true, data });
+  });
+
+  
   socket.on("disconnect", () => {
-    console.log("Usuario desconectado:", socket.id);
+    console.log(`🔴 ${socket.username || "Usuario desconocido"} se desconectó`);
+    if (socket.username) {
+      usuariosConectados.delete(socket.username);
+    }
   });
 });
 
@@ -52,7 +95,6 @@ const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
-
 
 app.post("/api/send-code", async (req, res) => {
   try {
@@ -64,17 +106,17 @@ app.post("/api/send-code", async (req, res) => {
       to,
     });
 
-    console.log("✅ SMS enviado:", message.sid);
+    console.log("SMS enviado:", message.sid);
     res.json({ success: true, sid: message.sid });
   } catch (error) {
-    console.error("❌ Error Twilio:", error);
+    console.error("Error Twilio:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 
 app.get("/", (req, res) => {
-  res.send("✅ Servidor WhatsApp-Clon Backend activo y con CORS funcionando");
+  res.send("Servidor WhatsApp-Clon Backend activo y con CORS funcionando");
 });
 
 
