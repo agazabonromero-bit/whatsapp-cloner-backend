@@ -13,8 +13,7 @@ const app = express();
 const corsOptions = {
   origin: [
     "http://localhost:5173",
-    "https://whatsapp-clon-6f67.vercel.app",
-    "https://whatsapp-cloner-backend.onrender.com",
+    "https://whatsapp-clon-6f67.vercel.app",    
   ],
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
