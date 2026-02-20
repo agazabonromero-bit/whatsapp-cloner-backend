@@ -10,7 +10,7 @@ dotenv.config();
 
 const app = express();
 
-// 👌 Necesario para que Render maneje bien WebSockets detrás del proxy
+
 app.set("trust proxy", 1);
 
 const corsOptions = {
@@ -27,13 +27,13 @@ app.use(express.json());
 
 const server = http.createServer(app);
 
-// ================== SUPABASE ==================
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ================== SOCKET.IO CONFIG ==================
+
 const io = new Server(server, {
   cors: {
     origin: [
@@ -44,26 +44,26 @@ const io = new Server(server, {
     credentials: true,
   },
   transports: ["websocket", "polling"],
-  pingTimeout: 60000,      // Evita que Render corte la conexión
+  pingTimeout: 60000,      
   pingInterval: 25000,
-  allowEIO3: true,         // Compatibilidad total
+  allowEIO3: true,        
 });
 
-// Mapa para usuarios conectados
+
 const usuariosConectados = new Map();
 
-// ================== SOCKET.IO EVENTS ==================
+
 io.on("connection", (socket) => {
   console.log("🟢 Usuario conectado:", socket.id);
 
-  // Usuario se une al chat
+  
   socket.on("join", (username) => {
     socket.username = username;
     usuariosConectados.set(username, socket.id);
     console.log(`👤 ${username} se unió con ID ${socket.id}`);
   });
 
-  // Enviar mensaje
+  
   socket.on("sendMessage", async (data) => {
     const { from, to, texto, fecha } = data;
 
@@ -89,7 +89,7 @@ io.on("connection", (socket) => {
     socket.emit("messageSentConfirmation", { success: true, data });
   });
 
-  // Desconexión
+  
   socket.on("disconnect", () => {
     console.log(`🔴 ${socket.username || "Usuario"} se desconectó`);
     if (socket.username) {
@@ -98,7 +98,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// ================== TWILIO ENDPOINT ==================
+
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
@@ -122,12 +122,12 @@ app.post("/api/send-code", async (req, res) => {
   }
 });
 
-// ================== ROOT ==================
+
 app.get("/", (req, res) => {
   res.send("Servidor WhatsApp-Clon Backend activo 🚀");
 });
 
-// ================== START SERVER ==================
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
   console.log(`🔥 Servidor corriendo en http://localhost:${PORT}`)
