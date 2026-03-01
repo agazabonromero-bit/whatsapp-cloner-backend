@@ -1,37 +1,37 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import http from "http";
-import dotenv from "dotenv";
 import twilio from "twilio";
 import cors from "cors";
 import { Server } from "socket.io";
 import { createClient } from "@supabase/supabase-js";
 
-dotenv.config();
-
 const app = express();
-
-
 app.set("trust proxy", 1);
 
-const corsOptions = {
+app.use(cors({
   origin: [
     "http://localhost:5173",
-    "https://whatsapp-clon-6f67.vercel.app"],
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-};
+    "https://whatsapp-clon-6f67.vercel.app"
+  ],
+  methods: ["GET", "POST"],
+  credentials: true
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
 
 const server = http.createServer(app);
 
+console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+console.log("SUPABASE_KEY:", process.env.SUPABASE_KEY);
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_KEY
 );
+
+console.log("Supabase conectado correctamente");
 
 
 const io = new Server(server, {
@@ -44,9 +44,6 @@ const io = new Server(server, {
     credentials: true,
   },
   transports: ["websocket", "polling"],
-  pingTimeout: 60000,      
-  pingInterval: 25000,
-  allowEIO3: true,        
 });
 
 
@@ -54,46 +51,66 @@ const usuariosConectados = new Map();
 
 
 io.on("connection", (socket) => {
-  console.log("🟢 Usuario conectado:", socket.id);
+  console.log("🟢 Socket conectado:", socket.id);
 
   
   socket.on("join", (username) => {
-    socket.username = username;
+    socket.username = username; 
+    socket.join(username);      
     usuariosConectados.set(username, socket.id);
-    console.log(`👤 ${username} se unió con ID ${socket.id}`);
+
+    console.log(`👤 ${username} conectado con socket ${socket.id}`);
   });
 
   
   socket.on("sendMessage", async (data) => {
     const { from, to, texto, fecha } = data;
 
-    console.log(`💬 Mensaje de ${from} a ${to}: ${texto}`);
+    const mensaje = {
+      from,
+      to,
+      texto,
+      fecha,
+      estado: "enviado"
+    };
 
+    console.log(`💬 ${from} → ${to}: ${texto}`);
+
+    
     try {
-      const { error } = await supabase.from("mensajes").insert([data]);
-      if (error) console.error("❌ Error guardando mensaje:", error);
-      else console.log("✅ Mensaje guardado en Supabase");
+      const { error } = await supabase
+        .from("mensajes")
+        .insert([mensaje]);
+
+      if (error) {
+        console.error("❌ Error guardando mensaje:", error.message);
+      } else {
+        console.log("✅ Mensaje guardado en Supabase");
+      }
     } catch (err) {
-      console.error("⚠️ Error de Supabase:", err.message);
+      console.error("⚠️ Error inesperado Supabase:", err.message);
     }
 
-    const targetSocketId = usuariosConectados.get(to);
+    
+    io.to(to).emit("receiveMessage", {
+      ...mensaje,
+      estado: "recibido"
+    });
 
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("receiveMessage", data);
-      console.log(`📨 Enviado mensaje de ${from} a ${to}`);
-    } else {
-      console.log(`⚠️ ${to} no está conectado`);
-    }
-
-    socket.emit("messageSentConfirmation", { success: true, data });
+    
+    socket.emit("messageSentConfirmation", {
+      ...mensaje,
+      estado: "enviado"
+    });
   });
 
   
   socket.on("disconnect", () => {
-    console.log(`🔴 ${socket.username || "Usuario"} se desconectó`);
     if (socket.username) {
       usuariosConectados.delete(socket.username);
+      console.log(`🔴 ${socket.username} se desconectó`);
+    } else {
+      console.log("🔴 Socket desconectado:", socket.id);
     }
   });
 });
@@ -114,11 +131,10 @@ app.post("/api/send-code", async (req, res) => {
       to,
     });
 
-    console.log("SMS enviado:", message.sid);
     res.json({ success: true, sid: message.sid });
   } catch (error) {
     console.error("Error Twilio:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false });
   }
 });
 
@@ -130,5 +146,7 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
-  console.log(`🔥 Servidor corriendo en http://localhost:${PORT}`)
+  console.log(`🔥 Servidor corriendo en puerto ${PORT}`)
 );
+
+
